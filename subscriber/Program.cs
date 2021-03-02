@@ -12,6 +12,9 @@ namespace subscriber
 		{
 			var sub = new Subscriber();
 			sub.PopMessage(10000);
+
+			//var loggerSub = new LogSubscriber();
+			//loggerSub.LogMessage();
 		}
 	}
 
@@ -25,12 +28,13 @@ namespace subscriber
 			{
 				using (var channel = connection.CreateModel())
 				{
-					channel.QueueDeclare(queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
-							durable: default,
-							exclusive: default,
-							autoDelete: default,
-							arguments: null);
+					//channel.QueueDeclare(queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
+					//		durable: default,
+					//		exclusive: default,
+					//		autoDelete: default,
+					//		arguments: null);
 					channel.BasicQos(0, 1, default);
+					channel.QueueBind(publisher.Publisher.DEFAULT_QUEUE_NAME, publisher.Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
 
 					var listener = new EventingBasicConsumer(channel);
 					listener.Received += (model, eventInfo) =>
@@ -54,6 +58,42 @@ namespace subscriber
 							consumer: listener
 							);
 
+					Console.ReadKey();
+				}
+			}
+		}
+	}
+
+	internal sealed class LogSubscriber
+	{
+		public void LogMessage()
+		{
+			var factory = new ConnectionFactory();
+
+			using (var connection = factory.CreateConnection())
+			{
+				using (var channel = connection.CreateModel())
+				{
+					channel.QueueDeclare(
+						queue: "logQueue",
+						durable: true,
+						exclusive: default,
+						autoDelete: default);
+					channel.QueueBind("logQueue", publisher.Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
+
+					var listener = new EventingBasicConsumer(channel);
+					listener.Received += (model, args) =>
+					{
+						var body = args.Body.ToArray();
+						var message = Encoding.UTF8.GetString(body);
+
+						Console.WriteLine($"properties of connection ex: {args.Exchange}");
+						Console.WriteLine(message);
+
+						channel.BasicAck(args.DeliveryTag, default);
+					};
+
+					channel.BasicConsume("logQueue", default, listener);
 					Console.ReadKey();
 				}
 			}

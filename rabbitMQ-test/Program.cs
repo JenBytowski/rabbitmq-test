@@ -18,6 +18,7 @@ namespace publisher
 	public sealed class Publisher
 	{
 		public const string DEFAULT_QUEUE_NAME = "defaultQueue";
+		public const string DEFAULT_EXCHANGE_NAME = "defaultExchange";
 
 		public void Send(string message)
 		{
@@ -29,6 +30,10 @@ namespace publisher
 				{
 					var properties = channel.CreateBasicProperties();
 
+					channel.ExchangeDeclare(Publisher.DEFAULT_EXCHANGE_NAME, ExchangeType.Fanout);
+					channel.QueueBind(Publisher.DEFAULT_QUEUE_NAME, Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
+
+					//create a queue when isnt set
 					//channel.QueueDeclare(queue: Publisher.DEFAULT_QUEUE_NAME,
 					//	//save queue when rabbit dies
 					//		durable: true,
@@ -39,7 +44,7 @@ namespace publisher
 					var body = Encoding.UTF8.GetBytes(message);
 
 					channel.BasicPublish(
-							exchange: string.Empty,
+							exchange: Publisher.DEFAULT_EXCHANGE_NAME,
 							routingKey: Publisher.DEFAULT_QUEUE_NAME,
 							basicProperties: properties,
 							body: body);
