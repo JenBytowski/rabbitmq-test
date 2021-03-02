@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -10,15 +11,13 @@ namespace subscriber
 		static void Main(string[] args)
 		{
 			var sub = new Subscriber();
-			sub.PopMessage();
-
-			Console.ReadKey();
+			sub.PopMessage(5000);
 		}
 	}
 
 	internal sealed class Subscriber
 	{
-		public void PopMessage()
+		public void PopMessage(int sleepTime)
 		{
 			var factory = new ConnectionFactory() { HostName = "localhost" };
 
@@ -41,13 +40,19 @@ namespace subscriber
 						}
 
 						var body = Encoding.UTF8.GetString(eventInfo.Body.ToArray());
+
+						Thread.Sleep(sleepTime);
+
 						Console.WriteLine($"publisher says: {body}");
+						channel.BasicAck(eventInfo.DeliveryTag, default);
 					};
 					channel.BasicConsume(
 							queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
-							autoAck: true,
+							//autoAck: true,
 							consumer: listener
 							);
+
+					Console.ReadKey();
 				}
 			}
 		}

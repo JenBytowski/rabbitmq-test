@@ -27,8 +27,11 @@ namespace publisher
 			{
 				using (var channel = connection.CreateModel())
 				{
+					var properties = channel.CreateBasicProperties();
+
 					channel.QueueDeclare(queue: Publisher.DEFAULT_QUEUE_NAME,
-							durable: default,
+						//save queue when rabbit dies
+							durable: true,
 							exclusive: default,
 							autoDelete: default,
 							arguments: null);
@@ -38,7 +41,7 @@ namespace publisher
 					channel.BasicPublish(
 							exchange: string.Empty,
 							routingKey: Publisher.DEFAULT_QUEUE_NAME,
-							basicProperties: null,
+							basicProperties: properties,
 							body: body);
 
 					Console.WriteLine("pulling message to queue");
