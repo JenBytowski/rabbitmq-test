@@ -1,8 +1,8 @@
-﻿using System;
+﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
+using System;
 using System.Text;
 using System.Threading;
-using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 namespace subscriber
 {
@@ -11,7 +11,7 @@ namespace subscriber
 		static void Main(string[] args)
 		{
 			var sub = new Subscriber();
-			sub.PopMessage(5000);
+			sub.PopMessage(10000);
 		}
 	}
 
@@ -30,6 +30,7 @@ namespace subscriber
 							exclusive: default,
 							autoDelete: default,
 							arguments: null);
+					channel.BasicQos(0, 1, default);
 
 					var listener = new EventingBasicConsumer(channel);
 					listener.Received += (model, eventInfo) =>
@@ -46,6 +47,7 @@ namespace subscriber
 						Console.WriteLine($"publisher says: {body}");
 						channel.BasicAck(eventInfo.DeliveryTag, default);
 					};
+
 					channel.BasicConsume(
 							queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
 							//autoAck: true,

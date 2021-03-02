@@ -29,12 +29,12 @@ namespace publisher
 				{
 					var properties = channel.CreateBasicProperties();
 
-					channel.QueueDeclare(queue: Publisher.DEFAULT_QUEUE_NAME,
-						//save queue when rabbit dies
-							durable: true,
-							exclusive: default,
-							autoDelete: default,
-							arguments: null);
+					//channel.QueueDeclare(queue: Publisher.DEFAULT_QUEUE_NAME,
+					//	//save queue when rabbit dies
+					//		durable: true,
+					//		exclusive: default,
+					//		autoDelete: default,
+					//		arguments: null);
 
 					var body = Encoding.UTF8.GetBytes(message);
 
