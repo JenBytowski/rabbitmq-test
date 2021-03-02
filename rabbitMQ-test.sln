@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31019.35
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "publisher", "rabbitMQ-test\publisher.csproj", "{0A22B572-DE1A-4C13-8FD4-F0BE9105D9FA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "publisher", "publisher\publisher.csproj", "{0A22B572-DE1A-4C13-8FD4-F0BE9105D9FA}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "subscriber", "subscriber\subscriber.csproj", "{7576305E-BA73-46B4-8552-7A4D1D9E1ED6}"
 EndProject
