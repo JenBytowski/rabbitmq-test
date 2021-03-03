@@ -8,19 +8,40 @@ namespace publisher
 	{
 		static void Main(string[] args)
 		{
-			var publisher = new Publisher();
+			var publisher = new StringMessagePublisher();
 			publisher.Send("hello");
 
 			Console.ReadKey();
 		}
 	}
 
-	public sealed class Publisher
+	public abstract class Publisher<T> where T : class
 	{
 		public const string DEFAULT_QUEUE_NAME = "defaultQueue";
 		public const string DEFAULT_EXCHANGE_NAME = "defaultExchange";
 
-		public void Send(string message)
+		protected readonly string queue;
+		protected readonly string exchanger;
+		protected readonly string routingKey;
+
+		protected Publisher(string queue = default, string exchanger = default, string routingKey = default)
+		{
+			this.queue = queue;
+			this.exchanger = exchanger;
+			this.routingKey = routingKey;
+		}
+
+		public abstract void Send(T message);
+	}
+
+	internal class StringMessagePublisher : Publisher<string>
+	{
+		public StringMessagePublisher(string queue = default, string exchanger = default, string routingKey = default)
+			: base(queue ?? "stringQueue", exchanger ?? "stringMessageExchanger", routingKey ?? string.Empty)
+		{
+		}
+
+		public override void Send(string message)
 		{
 			var factory = new ConnectionFactory() { HostName = "localhost" };
 
@@ -30,26 +51,27 @@ namespace publisher
 				{
 					var properties = channel.CreateBasicProperties();
 
-					channel.ExchangeDeclare(Publisher.DEFAULT_EXCHANGE_NAME, ExchangeType.Fanout);
-					channel.QueueBind(Publisher.DEFAULT_QUEUE_NAME, Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
-
 					//create a queue when isnt set
-					//channel.QueueDeclare(queue: Publisher.DEFAULT_QUEUE_NAME,
-					//	//save queue when rabbit dies
-					//		durable: true,
-					//		exclusive: default,
-					//		autoDelete: default,
-					//		arguments: null);
+					channel.QueueDeclare(
+							queue: this.queue,
+							//save queue when rabbit dies
+							durable: default,
+							exclusive: default,
+							autoDelete: default,
+							arguments: null);
+
+					channel.ExchangeDeclare(this.exchanger, ExchangeType.Fanout);
+					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
 
 					var body = Encoding.UTF8.GetBytes(message);
 
 					channel.BasicPublish(
-							exchange: Publisher.DEFAULT_EXCHANGE_NAME,
-							routingKey: Publisher.DEFAULT_QUEUE_NAME,
+							exchange: this.exchanger,
+							routingKey: this.queue,
 							basicProperties: properties,
 							body: body);
 
-					Console.WriteLine("pulling message to queue");
+					Console.WriteLine("pulling string message to queue");
 				}
 			}
 		}

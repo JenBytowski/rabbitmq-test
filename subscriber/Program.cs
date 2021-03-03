@@ -10,17 +10,41 @@ namespace subscriber
 	{
 		static void Main(string[] args)
 		{
-			var sub = new Subscriber();
-			sub.PopMessage(10000);
+			var sub = new BaseSubscriber(queue: "stringQueue", exchanger: "stringMessageExchanger");
+			sub.GetMessage();
 
 			//var loggerSub = new LogSubscriber();
 			//loggerSub.LogMessage();
 		}
 	}
 
-	internal sealed class Subscriber
+	public abstract class Subscriber
 	{
-		public void PopMessage(int sleepTime)
+		public const string DEFAULT_QUEUE_NAME = "defaultQueue";
+		public const string DEFAULT_EXCHANGE_NAME = "defaultExchange";
+
+		protected readonly string queue;
+		protected readonly string exchanger;
+		protected readonly string routingKey;
+
+		protected Subscriber(string queue = default, string exchanger = default, string routingKey = default)
+		{
+			this.queue = queue;
+			this.exchanger = exchanger;
+			this.routingKey = routingKey;
+		}
+
+		public abstract void GetMessage();
+	}
+
+	internal sealed class BaseSubscriber : Subscriber
+	{
+		public BaseSubscriber(string queue = default, string exchanger = default, string routingKey = default)
+			: base(queue ?? Subscriber.DEFAULT_QUEUE_NAME, exchanger ?? Subscriber.DEFAULT_EXCHANGE_NAME, routingKey ?? string.Empty)
+		{
+		}
+
+		public override void GetMessage()
 		{
 			var factory = new ConnectionFactory() { HostName = "localhost" };
 
@@ -28,13 +52,13 @@ namespace subscriber
 			{
 				using (var channel = connection.CreateModel())
 				{
-					//channel.QueueDeclare(queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
+					//channel.QueueDeclare(queue: this.queue,
 					//		durable: default,
 					//		exclusive: default,
 					//		autoDelete: default,
 					//		arguments: null);
 					channel.BasicQos(0, 1, default);
-					channel.QueueBind(publisher.Publisher.DEFAULT_QUEUE_NAME, publisher.Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
+					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
 
 					var listener = new EventingBasicConsumer(channel);
 					listener.Received += (model, eventInfo) =>
@@ -46,15 +70,14 @@ namespace subscriber
 
 						var body = Encoding.UTF8.GetString(eventInfo.Body.ToArray());
 
-						Thread.Sleep(sleepTime);
+						Thread.Sleep(7000);
 
 						Console.WriteLine($"publisher says: {body}");
 						channel.BasicAck(eventInfo.DeliveryTag, default);
 					};
 
 					channel.BasicConsume(
-							queue: publisher.Publisher.DEFAULT_QUEUE_NAME,
-							//autoAck: true,
+							queue: this.queue,
 							consumer: listener
 							);
 
@@ -64,9 +87,14 @@ namespace subscriber
 		}
 	}
 
-	internal sealed class LogSubscriber
+	internal sealed class LogSubscriber : Subscriber
 	{
-		public void LogMessage()
+		public LogSubscriber(string queue = default, string exchanger = default, string routingKey = default)
+			: base(queue ?? "logQueue", exchanger ?? "logMessageExchanger", routingKey ?? string.Empty)
+		{
+		}
+
+		public override void GetMessage()
 		{
 			var factory = new ConnectionFactory();
 
@@ -75,11 +103,11 @@ namespace subscriber
 				using (var channel = connection.CreateModel())
 				{
 					channel.QueueDeclare(
-						queue: "logQueue",
+						queue: this.queue,
 						durable: true,
 						exclusive: default,
 						autoDelete: default);
-					channel.QueueBind("logQueue", publisher.Publisher.DEFAULT_EXCHANGE_NAME, string.Empty);
+					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
 
 					var listener = new EventingBasicConsumer(channel);
 					listener.Received += (model, args) =>
@@ -93,7 +121,7 @@ namespace subscriber
 						channel.BasicAck(args.DeliveryTag, default);
 					};
 
-					channel.BasicConsume("logQueue", default, listener);
+					channel.BasicConsume(this.queue, default, listener);
 					Console.ReadKey();
 				}
 			}
