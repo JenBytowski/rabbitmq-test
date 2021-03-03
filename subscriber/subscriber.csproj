@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\rabbitMQ-test\publisher.csproj" />
+    <ProjectReference Include="..\publisher\publisher.csproj" />
   </ItemGroup>
 
 </Project>
