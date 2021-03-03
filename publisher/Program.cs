@@ -8,8 +8,11 @@ namespace publisher
 	{
 		static void Main(string[] args)
 		{
-			var publisher = new StringMessagePublisher();
-			publisher.Send("hello");
+			//var publisher = new StringMessagePublisher(queue: "logQueue", exchanger: "log", routingKey: "log");
+			//publisher.Send("hello");
+
+			var topicPublisher = new StringMessageTopicPublisher(exchanger: "log", routingKey: args[0]);
+			topicPublisher.Send("topic sender says hello");
 
 			Console.ReadKey();
 		}
@@ -24,7 +27,7 @@ namespace publisher
 		protected readonly string exchanger;
 		protected readonly string routingKey;
 
-		protected Publisher(string queue = default, string exchanger = default, string routingKey = default)
+		protected Publisher(string queue, string exchanger, string routingKey)
 		{
 			this.queue = queue;
 			this.exchanger = exchanger;
@@ -51,27 +54,44 @@ namespace publisher
 				{
 					var properties = channel.CreateBasicProperties();
 
-					//create a queue when isnt set
-					channel.QueueDeclare(
-							queue: this.queue,
-							//save queue when rabbit dies
-							durable: default,
-							exclusive: default,
-							autoDelete: default,
-							arguments: null);
-
-					channel.ExchangeDeclare(this.exchanger, ExchangeType.Fanout);
-					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
+					channel.ExchangeDeclare(this.exchanger, ExchangeType.Direct);
+					//channel.QueueBind(this.queue, this.exchanger, this.routingKey);
 
 					var body = Encoding.UTF8.GetBytes(message);
 
 					channel.BasicPublish(
 							exchange: this.exchanger,
-							routingKey: this.queue,
+							//possible to change this option
+							routingKey: this.routingKey,
 							basicProperties: properties,
 							body: body);
 
 					Console.WriteLine("pulling string message to queue");
+				}
+			}
+		}
+	}
+
+	internal sealed class StringMessageTopicPublisher : Publisher<string>
+	{
+		public StringMessageTopicPublisher(string exchanger, string routingKey, string queue = default)
+			: base(queue, exchanger, routingKey)
+		{ }
+
+		public override void Send(string message)
+		{
+			var factory = new ConnectionFactory() { HostName="localhost" };
+
+			using (var connection = factory.CreateConnection())
+			{
+				using (var channel = connection.CreateModel())
+				{
+					channel.ExchangeDeclare(this.exchanger, ExchangeType.Topic);
+
+					var body = Encoding.UTF8.GetBytes(message);
+
+					channel.BasicPublish(this.exchanger, this.routingKey, null, body);
+					Console.WriteLine($"{nameof(StringMessageTopicPublisher)} send message to {this.exchanger}");
 				}
 			}
 		}

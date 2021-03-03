@@ -10,11 +10,11 @@ namespace subscriber
 	{
 		static void Main(string[] args)
 		{
-			var sub = new BaseSubscriber(queue: "stringQueue", exchanger: "stringMessageExchanger");
-			sub.GetMessage();
+			//var sub = new BaseSubscriber(queue: "stringQueue", exchanger: "stringMessageExchanger");
+			//sub.GetMessage();
 
-			//var loggerSub = new LogSubscriber();
-			//loggerSub.LogMessage();
+			var loggerSub = new LogSubscriber(queue: "logQueue", exchanger: "log", routingKey: args[0]);
+			loggerSub.GetMessage();
 		}
 	}
 
@@ -27,7 +27,7 @@ namespace subscriber
 		protected readonly string exchanger;
 		protected readonly string routingKey;
 
-		protected Subscriber(string queue = default, string exchanger = default, string routingKey = default)
+		protected Subscriber(string queue, string exchanger, string routingKey)
 		{
 			this.queue = queue;
 			this.exchanger = exchanger;
@@ -52,11 +52,14 @@ namespace subscriber
 			{
 				using (var channel = connection.CreateModel())
 				{
-					//channel.QueueDeclare(queue: this.queue,
-					//		durable: default,
-					//		exclusive: default,
-					//		autoDelete: default,
-					//		arguments: null);
+					// create a queue when isnt set
+					channel.QueueDeclare(
+							queue: this.queue,
+							//save queue when rabbit dies
+							durable: default,
+							exclusive: default,
+							autoDelete: default,
+							arguments: null);
 					channel.BasicQos(0, 1, default);
 					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
 
@@ -102,9 +105,10 @@ namespace subscriber
 			{
 				using (var channel = connection.CreateModel())
 				{
+					channel.ExchangeDeclare(this.exchanger, ExchangeType.Topic);
 					channel.QueueDeclare(
 						queue: this.queue,
-						durable: true,
+						durable: default,
 						exclusive: default,
 						autoDelete: default);
 					channel.QueueBind(this.queue, this.exchanger, this.routingKey);
@@ -115,7 +119,7 @@ namespace subscriber
 						var body = args.Body.ToArray();
 						var message = Encoding.UTF8.GetString(body);
 
-						Console.WriteLine($"properties of connection ex: {args.Exchange}");
+						Console.WriteLine($"properties of connection ex: {args.Exchange}, routing key: {args.RoutingKey}");
 						Console.WriteLine(message);
 
 						channel.BasicAck(args.DeliveryTag, default);
